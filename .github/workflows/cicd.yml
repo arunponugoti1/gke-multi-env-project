@@ -3,12 +3,17 @@ name: CI/CD Pipeline - Build, Push & Deploy
 on:
   workflow_dispatch:
 
+# Required for Workload Identity Federation (no SA key needed)
+permissions:
+  contents: read
+  id-token: write
+
 env:
   PROJECT_ID: project-69f6f6fe-42ac-4d0e-8cd
   REGION: us-central1
-  AR_REPO: python-web-app-images           # Artifact Registry repo name (terraform: app_name + "-images")
-  IMAGE_NAME: python-web-app               # Image name inside the repo
-  DEPLOY_PIPELINE: python-app-pipeline     # Cloud Deploy delivery pipeline name (from clouddeploy.yaml)
+  AR_REPO: python-web-app-images        # Artifact Registry repo name
+  IMAGE_NAME: python-web-app            # Image name inside the repo
+  DEPLOY_PIPELINE: python-app-pipeline  # Cloud Deploy delivery pipeline name
 
 jobs:
   build-and-deploy:
@@ -20,13 +25,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Authenticate to GCP using Service Account key ─────────────────────
-      #       Store your SA key JSON as GitHub secret: GCP_SA_KEY
-      #       (Settings → Secrets and variables → Actions → New repository secret)
+      # ── 2. Authenticate to GCP via Workload Identity Federation ──────────────
+      #       No SA key file needed — GitHub OIDC token is used instead.
+      #       GitHub Secrets required:
+      #         WIF_PROVIDER        → projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+      #         WIF_SERVICE_ACCOUNT → cicd-pipeline-sa@project-69f6f6fe-42ac-4d0e-8cd.iam.gserviceaccount.com
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
       # ── 3. Install gcloud SDK ─────────────────────────────────────────────────
       - name: Set up Cloud SDK
@@ -39,7 +47,7 @@ jobs:
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
       # ── 5. Build Docker image ─────────────────────────────────────────────────
-      #       Build context is ./app  (Dockerfile lives there)
+      #       Build context is ./app  (Dockerfile + app.py live there)
       - name: Build Docker image
         run: |
           docker build \
@@ -77,6 +85,6 @@ jobs:
           echo "  Cloud Deploy release: release-${SHORT_SHA}"
           echo "  Pipeline: ${{ env.DEPLOY_PIPELINE }}"
           echo ""
-          echo "  STAGING  → deployed automatically"
-          echo "  PRODUCTION → go to Cloud Deploy console to approve"
+          echo "  STAGING    → deployed automatically"
+          echo "  PRODUCTION → approve in Cloud Deploy console"
           echo "============================================"
