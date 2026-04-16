@@ -1,0 +1,82 @@
+name: CI/CD Pipeline - Build, Push & Deploy
+
+on:
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: project-69f6f6fe-42ac-4d0e-8cd
+  REGION: us-central1
+  AR_REPO: python-web-app-images           # Artifact Registry repo name (terraform: app_name + "-images")
+  IMAGE_NAME: python-web-app               # Image name inside the repo
+  DEPLOY_PIPELINE: python-app-pipeline     # Cloud Deploy delivery pipeline name (from clouddeploy.yaml)
+
+jobs:
+  build-and-deploy:
+    name: Build → Push → Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout code ─────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Authenticate to GCP using Service Account key ─────────────────────
+      #       Store your SA key JSON as GitHub secret: GCP_SA_KEY
+      #       (Settings → Secrets and variables → Actions → New repository secret)
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # ── 3. Install gcloud SDK ─────────────────────────────────────────────────
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      # ── 4. Configure Docker to push to Artifact Registry ─────────────────────
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # ── 5. Build Docker image ─────────────────────────────────────────────────
+      #       Build context is ./app  (Dockerfile lives there)
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            ./app
+
+      # ── 6. Push image to Artifact Registry ───────────────────────────────────
+      - name: Push Docker image
+        run: |
+          docker push \
+            ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # ── 7. Create Cloud Deploy release ───────────────────────────────────────
+      #       - Auto-deploys to STAGING immediately
+      #       - PRODUCTION rollout requires manual approval in Cloud Deploy console
+      - name: Create Cloud Deploy release
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          gcloud deploy releases create "release-${SHORT_SHA}" \
+            --project=${{ env.PROJECT_ID }} \
+            --region=${{ env.REGION }} \
+            --delivery-pipeline=${{ env.DEPLOY_PIPELINE }} \
+            --skaffold-file=k8s/skaffold.yaml \
+            --source=. \
+            --images=${{ env.IMAGE_NAME }}-image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # ── 8. Print summary ─────────────────────────────────────────────────────
+      - name: Print deployment summary
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "============================================"
+          echo "  Image pushed:"
+          echo "  ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo ""
+          echo "  Cloud Deploy release: release-${SHORT_SHA}"
+          echo "  Pipeline: ${{ env.DEPLOY_PIPELINE }}"
+          echo ""
+          echo "  STAGING  → deployed automatically"
+          echo "  PRODUCTION → go to Cloud Deploy console to approve"
+          echo "============================================"
