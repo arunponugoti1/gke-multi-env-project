@@ -66,7 +66,7 @@ jobs:
       - name: Create Cloud Deploy release
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          gcloud deploy releases create "release-${SHORT_SHA}" \
+          gcloud deploy releases create "release-${SHORT_SHA}-${{ github.run_number }}" \
             --project=${{ env.PROJECT_ID }} \
             --region=${{ env.REGION }} \
             --delivery-pipeline=${{ env.DEPLOY_PIPELINE }} \
@@ -82,7 +82,7 @@ jobs:
           echo "  Image pushed:"
           echo "  ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
           echo ""
-          echo "  Cloud Deploy release: release-${SHORT_SHA}"
+          echo "  Cloud Deploy release: release-${SHORT_SHA}-${{ github.run_number }}"
           echo "  Pipeline: ${{ env.DEPLOY_PIPELINE }}"
           echo ""
           echo "  STAGING    → deployed automatically"
