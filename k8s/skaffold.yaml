@@ -1,0 +1,13 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+profiles:
+- name: staging
+  manifests:
+    kustomize:
+      paths:
+      - k8s/overlays/staging
+- name: production
+  manifests:
+    kustomize:
+      paths:
+      - k8s/overlays/production

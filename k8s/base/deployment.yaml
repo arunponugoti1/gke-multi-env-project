@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-web-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: python-web-app
+  template:
+    metadata:
+      labels:
+        app: python-web-app
+    spec:
+      containers:
+      - name: web-container
+        image: python-web-app-image
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ENVIRONMENT
+          value: "Base"

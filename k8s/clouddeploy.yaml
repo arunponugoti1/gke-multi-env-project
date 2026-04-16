@@ -1,0 +1,25 @@
+apiVersion: deploy.cloud.google.com/v1
+kind: DeliveryPipeline
+metadata:
+  name: python-app-pipeline
+serialPipeline:
+  stages:
+  - targetId: staging
+    profiles: [staging]
+  - targetId: production
+    profiles: [production]
+---
+apiVersion: deploy.cloud.google.com/v1
+kind: Target
+metadata:
+  name: staging
+gke:
+  cluster: projects/project-69f6f6fe-42ac-4d0e-8cd/locations/us-central1/clusters/python-web-app-cluster
+---
+apiVersion: deploy.cloud.google.com/v1
+kind: Target
+metadata:
+  name: production
+requireApproval: true
+gke:
+  cluster: projects/project-69f6f6fe-42ac-4d0e-8cd/locations/us-central1/clusters/python-web-app-cluster
