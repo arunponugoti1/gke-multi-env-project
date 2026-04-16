@@ -70,8 +70,8 @@ jobs:
             --project=${{ env.PROJECT_ID }} \
             --region=${{ env.REGION }} \
             --delivery-pipeline=${{ env.DEPLOY_PIPELINE }} \
-            --skaffold-file=k8s/skaffold.yaml \
-            --source=. \
+            --skaffold-file=skaffold.yaml \
+            --source=k8s \
             --images=${{ env.IMAGE_NAME }}-image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       # ── 8. Print summary ─────────────────────────────────────────────────────
