@@ -5,9 +5,9 @@ profiles:
   manifests:
     kustomize:
       paths:
-      - k8s/overlays/staging
+      - overlays/staging
 - name: production
   manifests:
     kustomize:
       paths:
-      - k8s/overlays/production
+      - overlays/production
