@@ -16,4 +16,4 @@ patches:
           - name: web-container
             env:
             - name: ENVIRONMENT
-              value: "STAGING"
+              value: "DEV"
