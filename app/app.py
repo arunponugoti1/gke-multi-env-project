@@ -10,8 +10,8 @@ def hello():
     return f"""
     <html>
         <body style="font-family: sans-serif; text-align: center; margin-top: 50px;">
-            <h1>🚀 Hello from GKE Autopilot!</h1>
-            <h2>Current Environment: <span style="color: blue;">{ENVIRONMENT}</span></h2>
+            <h1>🚀 Hello CGI memebers!</h1>
+            <h2>The Current Environment: <span style="color: blue;">{ENVIRONMENT}</span></h2>
         </body>
     </html>
     """
